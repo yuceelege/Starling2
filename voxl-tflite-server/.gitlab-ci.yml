@@ -1,0 +1,13 @@
+
+before_script:
+    - git clone -q --depth 1 https://gitlab.com/voxl-public/voxl-sdk/ci-tools
+
+include:
+  - project: 'voxl-public/voxl-sdk/ci-tools'
+    file: '/pipeline-configs/cross-qrb5165.yml'
+  - project: 'voxl-public/voxl-sdk/ci-tools'
+    file: '/pipeline-configs/common.yml'
+
+variables:
+    GIT_SUBMODULE_STRATEGY: recursive
+
