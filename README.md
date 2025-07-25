@@ -116,3 +116,61 @@ If you are curious, you can check out more examples from [https://github.com/mav
 —--------------------------------------------------------------------------------------------------------------
 
 # Custom Neural Network Deployment
+
+You need to modify voxl-tflite-server repository for your specific neural network model to deploy custom neural networks e.g. adjust the input output tensors to be compatible with your target model. Let’s your custom model as custom_network without loss of generality. Here are the steps to add your own model:
+
+---
+
+## ➤ Step 1: Create Header File
+
+Go /include/model_helper directory. Create custom_network_helper.h header. See the example. gate_xyz_model_helper.h I already made for another network that outputs xyz pose of gates.
+
+This header file defines the GateXyzModelHelper class, a specialized helper for running inference with a specific neural network model that estimates gate positions in 3D. It extends ModelHelper and customizes the worker and postprocess functions for model-specific behavior during inference.
+
+These functions don’t really change except helper and class names unless you want to do some postprocessing on inference outputs before publishing on the mpa pipe.
+
+---
+
+## ➤ Step 2: Create Source File
+
+Go /src/model_helper directory. Create custom_network_helper.cpp . See the example. gate_xyz_model_helper.cpp in the same directory
+
+This source file implements the GateXyzModelHelper class defined in the header. It runs inference using a neural network model and writes the predicted 3D gate position (x, y, z) with a timestamp to a pipe. The worker() method extracts the model output, formats it into a GateXyzMsg, prints it, and sends it through a pipe for downstream use. The postprocess() method is a stub and does nothing.
+
+You can change the format of output that is written on the pipe in this code for your custom application. Since we didn’t need post processing, we left it empty.
+
+---
+
+## ➤ Step 3: Register Model Name
+
+Go to /include/model_helper/model_info.h and define your custom Model Name under enum ModelName{} along with other names.
+
+---
+
+## ➤ Step 4: Update main.cpp
+
+Go to main.cpp at the top directory. Add an “else if” condition at the very end to add your custom model in the same directory (this directory is inside VOXL 2 and we will eventually push our model into this directory through ADB). Write the model name you defined in model_info.h at model_name section, you can write OBJECT_DETECTION at the model_category section as this is not very important. Lastly, you can keep norm_type = None
+
+---
+
+## ➤ Step 5: Build the Code
+
+```bash
+voxl-docker -i voxl-cross
+./install_build_deps.sh qrb5165 sdk-1.3 to install the dependencies
+./clean.sh
+./build.sh qrb5165
+
+
+Note: This is why I previously urged to install voxl-cross 2.7. According to we were previously facing build errors due to some bug so we are following the solution here https://forum.modalai.com/topic/4569/tensorflow-lite-dev-setup-failing-on-ubuntu-22 to avoid this.
+
+➤ Step 6: Deploy the Package
+
+When the build is complete, run
+
+voxl-cross:~$ ./make_package.sh deb
+
+This will create a deb file which will be installed inside the VOXL 2. Now leave the docker and run this last command to push the deb file inside the VOXL 2 (make sure USB connected) and install it automatically
+
+voxl-tflite-server$ ./deploy_to_voxl.sh
+
