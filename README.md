@@ -155,7 +155,7 @@ Go to main.cpp at the top directory. Add an “else if” condition at the very 
 
 ## ➤ Step 5: Build the Code
 
-```bash
+`
 voxl-docker -i voxl-cross
 ./install_build_deps.sh qrb5165 sdk-1.3 to install the dependencies
 ./clean.sh
