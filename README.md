@@ -155,11 +155,12 @@ Go to main.cpp at the top directory. Add an “else if” condition at the very 
 
 ## ➤ Step 5: Build the Code
 
-`
-voxl-docker -i voxl-cross
-./install_build_deps.sh qrb5165 sdk-1.3 to install the dependencies
-./clean.sh
+
+voxl-docker -i voxl-cross<br>
+./install_build_deps.sh qrb5165 sdk-1.3 to install the dependencies<br>
+./clean.sh<br>
 ./build.sh qrb5165
+
 
 
 Note: This is why I previously urged to install voxl-cross 2.7. According to we were previously facing build errors due to some bug so we are following the solution here https://forum.modalai.com/topic/4569/tensorflow-lite-dev-setup-failing-on-ubuntu-22 to avoid this.
