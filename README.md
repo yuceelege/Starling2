@@ -165,7 +165,7 @@ voxl-docker -i voxl-cross<br>
 
 Note: This is why I previously urged to install voxl-cross 2.7. According to we were previously facing build errors due to some bug so we are following the solution here https://forum.modalai.com/topic/4569/tensorflow-lite-dev-setup-failing-on-ubuntu-22 to avoid this.
 
-➤ Step 6: Deploy the Package
+## ➤ Step 6: Deploy the Package
 
 When the build is complete, run
 
