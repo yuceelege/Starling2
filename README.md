@@ -117,7 +117,7 @@ If you are curious, you can check out more examples from [https://github.com/mav
 
 # Custom Neural Network Deployment
 
-You need to modify voxl-tflite-server repository for your specific neural network model to deploy custom neural networks e.g. adjust the input output tensors to be compatible with your target model. Let’s your custom model as custom_network without loss of generality. Here are the steps to add your own model:
+You need to modify voxl-tflite-server repository for your specific neural network model to deploy custom neural networks e.g. adjust the input output tensors to be compatible with your target model. Let your custom model be called as custom_network without loss of generality. Here are the steps to add your own model:
 
 ---
 
