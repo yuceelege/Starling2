@@ -51,8 +51,8 @@ Whenever we need to write custom C++ code directly inside the VOXL 2 machine, we
 
 Once you obtain voxl-cross_v2.7.tgz , proceed the voxl-cross installation with this file e.g. 
 
-docker load -i voxl-cross_v2.7.tgz
-docker tag voxl-cross:V2.7 voxl-cross:latest
+docker load -i voxl-cross_v2.7.tgz <br>
+docker tag voxl-cross:V2.7 voxl-cross:latest <br>
 voxl-docker -i voxl-cross
 
 
