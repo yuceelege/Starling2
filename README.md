@@ -2,12 +2,12 @@
 
 The upcoming information in this part is a distilled version of [https://docs.modalai.com/](https://docs.modalai.com/) of parts important for us.
 
-## Set up ADB
+## 1. Set up ADB
 [https://docs.modalai.com/setting-up-adb/](https://docs.modalai.com/setting-up-adb/) . Instructions are the same and definitely dont skip this part in the link: **"ModalAI Top Tip: Aliases"**. It allows you to directly connect to VOXL by typing "voxl" on the terminal given USB is connected.
 
 **ADB is very helpful** for establishing a terminal connection and doing file push/pull directly through USB, without SSH. 
 
-## Wifi Configuration
+## 2. Wifi Configuration
 (source: [https://docs.modalai.com/voxl-2-wifi-setup/](https://docs.modalai.com/voxl-2-wifi-setup/))
 
 1. write "voxl" in the host terminal to ADB into your device
@@ -20,7 +20,7 @@ The upcoming information in this part is a distilled version of [https://docs.mo
 After connecting to wifi, you can disconnect adb and directly connect through SSH if you wish. (passwd: oelinux123)
  
 
-# Modal Pipe Architecture / Basic Tools and Utilities
+## 3. Modal Pipe Architecture / Basic Tools and Utilities
 
 VOXL 2 has an internal structure similar to ROS. There are many services like camera, imu, tflite, mapper, etc... each running its internal process asynchronously. **Modal Pipe Architecture (MPA)** establishes pipes between these services and communicates the necessary information across various parts of the drone to maintain vital functionalities e.g. flight, navigation, telemetry etc.
 
