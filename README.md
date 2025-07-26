@@ -175,3 +175,6 @@ This will create a deb file which will be installed inside the VOXL 2. Now leave
 
 voxl-tflite-server$ ./deploy_to_voxl.sh
 
+----------------------------------------------------
+
+pip install onnx-tf==1.10.0
