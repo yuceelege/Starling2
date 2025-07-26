@@ -58,7 +58,7 @@ voxl-docker -i voxl-cross
 
 Lastly check out this link [https://docs.modalai.com/voxl-cross-template/](https://docs.modalai.com/voxl-cross-template/) to see the structure of voxl-cross container, which willl be important later.
 
-**Why voxl-cross / voxl-docker is important for us?**: This is future reference but in order to run custom neural networks, we will need to clone "[https://gitlab.com/voxl-public/voxl-sdk/services/voxl-tflite-server](https://gitlab.com/voxl-public/voxl-sdk/services/voxl-tflite-server)" change the C++ code to make the input output tensors compatible with our network and that requires writing C++ code which is compiled by voxl-cross. We then create a .deb file and deploy this to the voxl. 
+**Why voxl-cross / voxl-docker is important for us?**: This is future reference but in order to run custom neural networks, we will need to use a modified clone of "[https://gitlab.com/voxl-public/voxl-sdk/services/voxl-tflite-server](https://gitlab.com/voxl-public/voxl-sdk/services/voxl-tflite-server)" (already in repo) and change the C++ code to make the input output tensors compatible with our network and that requires writing C++ code which is compiled by voxl-cross. We then create a .deb file and deploy this to the voxl. 
 
 **voxl-tflite-server** is an MPA (introduced in number 3.) that publishes the output results of the neural network we choose.
 
