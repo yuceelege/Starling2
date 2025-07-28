@@ -221,6 +221,6 @@ Adjust paths/filenames in quantization.py for your TFLite model and run the scri
 
 #### **Step 4: Deploy to VOXL 2
 Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server):
-
+```bash
 adb push quantized_model.tflite /usr/bin/dnn/
 
