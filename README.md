@@ -176,29 +176,47 @@ This will create a deb file which will be installed inside the VOXL 2. Now leave
 voxl-tflite-server$ ./deploy_to_voxl.sh
 
 
-## ➤ Step 7: TFLite Conversion, Quantization and Deployment.
+## ➤ **Step 7: TFLite Conversion, Quantization, and Deployment**  
 
-Steps 1-6 were for preparing the tflite model for the voxl-tflite-server service. Now we will show some last steps about model conversion requirements. VOXL 2 can only run small to mid sized tflite networks. Given most models are PyTorch, this step will show the model conversion, quantization and deployment steps
+Steps 1-6 were for preparing the TFLite model for the `voxl-tflite-server` service. Now, we will cover the final steps about model conversion requirements.  
 
-We will follow the way of : Pytorch -> Onnx -> Tflite for model conversion. For Pytorch -> Onnx conversion, please
-follow the guide here as there is not much other than this to talk about this:
-https://docs.pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html
+**Key Constraints:**  
+- VOXL 2 can only run small to mid-sized TFLite networks.  
+- Most models are in PyTorch, so this step focuses on:  
+  **PyTorch → ONNX → TFLite** conversion.  
 
-For the rest of the parts, we provided a specific directory namely "conversion", whose details are further explained in this part. 
+### **PyTorch to ONNX Conversion**  
+Follow the official guide below (no additional details needed):  
+[https://docs.pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html](https://docs.pytorch.org/tutorials/beginner/onnx/export_simple_model_to_onnx_tutorial.html)  
 
-"conversion" directory contains all the necessary files for onnx -> tflite conversion and 16-bit quantization. We will first create a conda environment by running the command
+---
 
-conda env create -n converter -f converter_env.yml
+### **ONNX to TFLite Conversion & Quantization**  
+The provided `conversion` directory contains all necessary files.  
 
-Further install the a specific version of onnx-tf as well:
+#### **Step 1: Set Up Environment**  
+1. Create a Conda environment:  
+   ```bash
+   conda env create -n converter -f converter_env.yml
 
-pip install onnx-tf==1.10.0
+#### **Step 2: Convert ONNX to TFLite
+Modify converter.py:
 
-Now in converter.py, change the input .onnx directory to your target onnx model and specify the output directory as well and run the script. This will create the *.tflite weights along with the *_tf folder
+Set the input ONNX model path.
 
-Then adjust the directory and file names in quatization.py for your recently converted tflite model and run this script as well to create the quantized version of your tflite model
+Specify the output directory.
 
-Lastly execute this command to push the quantized tflite model into the VOXL 2. Make sure the name of the model matches exactly with the model you defined in the main.cpp of the voxl-tflite-server configuration step.
+Run the script to generate:
+
+*.tflite weights.
+
+*_tf folder.
+
+#### **Step 3: Quantization
+Adjust paths/filenames in quantization.py for your TFLite model and run the script
+
+#### **Step 4: Deploy to VOXL 2
+Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server):
 
 adb push quantized_model.tflite /usr/bin/dnn/
 
