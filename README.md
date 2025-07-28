@@ -217,7 +217,7 @@ Run the script to generate:
 *_tf folder.
 
 #### **Step 3: Quantization**
-Adjust paths/filenames in quantization.py for your TFLite model and run the script
+Adjust paths/filenames in quantization.py for your TFLite model and run quantization.py
 
 #### **Step 4: Deploy to VOXL 2**
 Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server):
