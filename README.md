@@ -197,7 +197,7 @@ The provided `conversion` directory contains all necessary files.
 #### **Step 1: Set Up Environment**  
 1. Create a Conda environment:  
    ```bash
-   conda env create -n converter -f converter_env.yml <br>
+   conda env create -n converter -f converter_env.yml
 2. Additionally install the following library:
    ```bash
    pip install onnx-tf==1.10.0
