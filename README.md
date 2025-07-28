@@ -203,7 +203,7 @@ The provided `conversion` directory contains all necessary files.
    pip install onnx-tf==1.10.0
    
 
-#### **Step 2: Convert ONNX to TFLite
+#### **Step 2: Convert ONNX to TFLite**
 Modify converter.py:
 
 Set the input ONNX model path.
@@ -216,10 +216,10 @@ Run the script to generate:
 
 *_tf folder.
 
-#### **Step 3: Quantization
+#### **Step 3: Quantization**
 Adjust paths/filenames in quantization.py for your TFLite model and run the script
 
-#### **Step 4: Deploy to VOXL 2
+#### **Step 4: Deploy to VOXL 2**
 Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server):
 ```bash
 adb push quantized_model.tflite /usr/bin/dnn/
