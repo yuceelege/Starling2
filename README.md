@@ -224,3 +224,41 @@ Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server
 ```bash
 adb push quantized_model.tflite /usr/bin/dnn/
 
+-----------------------------------------------------------------------------------
+
+# **State Based Control**
+
+We may use the VICON directly to get the true state information for our tasks. For this, we need to disable VIO so that PX4 within the VOXL 2
+can fuse the external vision (VICON) with other sensors in its EKF. Then we will just use the Python MAVSDK docker to run motion planning algorithms
+with the true state information this time.
+
+1. Type the following:
+```bash
+nano /etc/modalai/voxl-vision-hub.conf
+
+2. Do the following change:
+```bash
+en_vio = "false"
+
+3. Stop and disable voxl-vision-hub and voxl-qvio-server
+```bash
+systemctl disable voxl-vision-hub
+```bash
+systemctl disable voxl-qvio-server
+```bash
+systemctl stop voxl-vision-hub
+```bash
+systemctl stop voxl-qvio-server
+
+Now VOXL 2 is ready for using the VICON. Enable and start these services and change the en_vio parameter back to "true" if you intend to use VIO later.
+
+4. In the Desktop at IRL, you need to install the pymavlink and Vicon Datastream SDK 1.12 libraries.
+
+```bash
+pip install pymavlink
+
+For Datastream SDK, follow this guide:
+
+"https://help.vicon.com/space/DSSDK111/9797839/Vicon+DataStream+SDK+Quick+Start+Guide+for+Python"
+
+Eventually, you should be able to do "import pymavlink" and "import vicon_dssdk" in Python.
