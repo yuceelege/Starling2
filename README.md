@@ -235,30 +235,40 @@ with the true state information this time.
 1. Type the following:
 ```bash
 nano /etc/modalai/voxl-vision-hub.conf
+```
 
-2. Do the following change:
+2. Do the following change (inside the config file):
 ```bash
 en_vio = "false"
+```
 
-3. Stop and disable voxl-vision-hub and voxl-qvio-server
+3. Stop and disable voxl-vision-hub and voxl-qvio-server:
 ```bash
 systemctl disable voxl-vision-hub
+```
 ```bash
 systemctl disable voxl-qvio-server
+```
 ```bash
 systemctl stop voxl-vision-hub
+```
 ```bash
 systemctl stop voxl-qvio-server
+```
 
-Now VOXL 2 is ready for using the VICON. Enable and start these services and change the en_vio parameter back to "true" if you intend to use VIO later.
+Now VOXL 2 is ready for using the VICON. Enable and start these services and change the `en_vio` parameter back to `"true"` if you intend to use VIO later.
 
-4. In the Desktop at IRL, you need to install the pymavlink and Vicon Datastream SDK 1.12 libraries.
-
+4. In the Desktop at IRL, you need to install the pymavlink and Vicon Datastream SDK 1.12 libraries:
 ```bash
 pip install pymavlink
+```
 
-For Datastream SDK, follow this guide:
+For Datastream SDK, follow this guide:  
+https://help.vicon.com/space/DSSDK111/9797839/Vicon+DataStream+SDK+Quick+Start+Guide+for+Python
 
-"https://help.vicon.com/space/DSSDK111/9797839/Vicon+DataStream+SDK+Quick+Start+Guide+for+Python"
+Eventually, you should be able to do:
+```python
+import pymavlink
+import vicon_dssdk
+```
 
-Eventually, you should be able to do "import pymavlink" and "import vicon_dssdk" in Python.
