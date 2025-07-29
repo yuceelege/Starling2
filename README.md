@@ -223,7 +223,7 @@ Adjust paths/filenames in quantization.py for your TFLite model and run quantiza
 Push the quantized model (ensure the name matches main.cpp in voxl-tflite-server):
 ```bash
 adb push quantized_model.tflite /usr/bin/dnn/
-
+```
 -----------------------------------------------------------------------------------
 
 # **State Based Control**
