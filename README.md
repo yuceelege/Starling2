@@ -271,4 +271,8 @@ Eventually, you should be able to do:
 import pymavlink
 import vicon_dssdk
 ```
+5. Transfer the "viconmavlink.py" to the IRL Desktop. Define the drone's vicon markers in the Vicon Tracker app. Adjust the viconmavlink.py so the object name in the tracker app and "subject_segment" variable matches. Connect the drone to the ViconRouter_2.4G wifi network.
 
+6. Run viconmavlink.py and check in the VOXL 2 whether it receives the odometry mavlink packages by typing "voxl-inspect-mavlink mavlink_from_gcs". If you see the odometry name in the packages list, then VOXL 2 is indeed receiving the state information and most likely processing it correctly.
+
+7. Now you can use everything we introduced in voxl-docker-mavsdk-python for various tasks.
