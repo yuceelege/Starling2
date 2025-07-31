@@ -79,7 +79,7 @@ RUN gcc -o /home/mpa_reader /home/mpa_reader.c -lmodal_pipe
 
 
 WORKDIR /home
-COPY voxl2_takeoff_land.py check_status.py vicon_test.py start-mavsdk-server.sh run-docker.sh .
+COPY voxl2_takeoff_land.py check_status.py vicon_test.py offboard_8_figure.py offboard_attitude.py offboard_position_velocity_ned.py offboard_velocity_body.py offboard_velocity_ned.py start-mavsdk-server.sh run-docker.sh .
 COPY mpa_pipe_reader.py /home/mpa_pipe_reader.py
 RUN chmod +x start-mavsdk-server.sh
 RUN chmod +x run-docker.sh

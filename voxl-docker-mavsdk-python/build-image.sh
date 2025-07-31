@@ -21,6 +21,12 @@ adb push Dockerfile $TARGET_DIR
 adb push voxl2_takeoff_land.py $TARGET_DIR
 adb push check_status.py $TARGET_DIR
 adb push vicon_test.py $TARGET_DIR
+adb push offboard_8_figure.py $TARGET_DIR
+adb push offboard_attitude.py $TARGET_DIR
+adb push offboard_position_velocity_ned.py $TARGET_DIR
+adb push offboard_velocity_body.py $TARGET_DIR
+adb push offboard_velocity_ned.py $TARGET_DIR
+
 adb push start-mavsdk-server.sh $TARGET_DIR
 adb push run-docker.sh $TARGET_DIR
 
