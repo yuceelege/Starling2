@@ -50,6 +50,7 @@ WORKDIR /home
 
 RUN python3 -m pip install -U pip
 RUN python3 -m pip install asyncio
+RUN python3 -m pip install math
 RUN git clone https://github.com/mavlink/MAVSDK-Python.git /home/MAVSDK-Python
 WORKDIR /home/MAVSDK-Python
 RUN git checkout tags/2.8.0 -b 2.8.0 \
