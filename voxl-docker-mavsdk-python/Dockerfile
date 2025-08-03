@@ -65,6 +65,7 @@ RUN git checkout tags/2.8.0 -b 2.8.0 \
 #     exit 1
 
 COPY mpa_reader.c /home/mpa_reader.c
+COPY mpa_writer.c /home/mpa_writer.c
 
 # Copy the proprietary qti-gbm package
 COPY qti-gbm_18.0.0-rc5_arm64.deb /tmp/
