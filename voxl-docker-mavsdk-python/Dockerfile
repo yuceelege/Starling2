@@ -75,6 +75,9 @@ RUN dpkg -i /tmp/qti-gbm_18.0.0-rc5_arm64.deb \
 RUN apt-get update && apt-get install -y libwayland-server0
 
 RUN gcc -o /home/mpa_reader /home/mpa_reader.c -lmodal_pipe
+RUN gcc -o /home/mpa_writer /home/mpa_writer.c -lmodal_pipe
+
+COPY neural_control.py /home/neural_control.py
 
 WORKDIR /home
 COPY voxl2_takeoff_land.py check_status.py vicon_test.py offboard_8_figure.py offboard_attitude.py offboard_position_velocity_ned.py offboard_velocity_body.py offboard_velocity_ned.py start-mavsdk-server.sh run-docker.sh .

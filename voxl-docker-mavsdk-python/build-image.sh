@@ -26,12 +26,14 @@ adb push offboard_attitude.py $TARGET_DIR
 adb push offboard_position_velocity_ned.py $TARGET_DIR
 adb push offboard_velocity_body.py $TARGET_DIR
 adb push offboard_velocity_ned.py $TARGET_DIR
+adb push neural_control.py $TARGET_DIR
 
 adb push start-mavsdk-server.sh $TARGET_DIR
 adb push run-docker.sh $TARGET_DIR
 
 adb push mpa_reader.c $TARGET_DIR
 adb push mpa_pipe_reader.py $TARGET_DIR
+adb push mpa_writer.c $TARGET_DIR
 
 adb push libmodal-json_0.4.7_arm64.deb  $TARGET_DIR
 adb push libvoxl-cutils_0.1.5_arm64.deb  $TARGET_DIR
