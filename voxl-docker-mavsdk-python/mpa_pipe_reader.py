@@ -2,7 +2,7 @@
 import subprocess
 import struct
 
-MSG_FORMAT = 'fffQ'  # 3 floats + 1 uint64
+MSG_FORMAT = 'ffffQ'  # 4 floats (vx, vy, vz, yaw) + 1 uint64
 MSG_SIZE = struct.calcsize(MSG_FORMAT)
 
 def main():
@@ -16,8 +16,8 @@ def main():
         data = proc.stdout.read(MSG_SIZE)
         if len(data) < MSG_SIZE:
             continue
-        x, y, z, timestamp = struct.unpack(MSG_FORMAT, data)
-        print(f"GateXyzMsg → x={x:.6f}, y={y:.6f}, z={z:.6f}, ts={timestamp}")
+        vx, vy, vz, yaw, timestamp = struct.unpack(MSG_FORMAT, data)
+        print(f"ControlMsg → vx={vx:.6f}, vy={vy:.6f}, vz={vz:.6f}, yaw={yaw:.6f}, ts={timestamp}")
 
 if __name__ == '__main__':
     main()

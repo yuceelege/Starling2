@@ -23,9 +23,9 @@ int main() {
     }
 
     if (pipe_client_open(ch,
-                         "/run/mpa/control_in",
-                         "mpa_reader",
-                         0,
+                         "/run/mpa/control_out",
+                         "mpa_writer",
+                         1,
                          0) != 0) {
         return 1;
     }
@@ -35,16 +35,16 @@ int main() {
         return 1;
     }
 
+    // Read control messages from stdin and write to pipe
     ControlMsg msg;
     while (1) {
-        ssize_t r = read(fd, &msg, sizeof(msg));
+        ssize_t r = read(STDIN_FILENO, &msg, sizeof(msg));
         if (r == sizeof(msg)) {
-            fwrite(&msg, sizeof(msg), 1, stdout);
-            fflush(stdout);
+            write(fd, &msg, sizeof(msg));
         } else {
             usleep(1000);
         }
     }
 
     return 0;
-}
+} 
