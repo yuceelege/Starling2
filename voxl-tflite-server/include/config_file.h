@@ -82,6 +82,7 @@
 
 extern char model[CHAR_BUF_SIZE];
 extern char input_pipe[CHAR_BUF_SIZE];
+extern char control_input_pipe[CHAR_BUF_SIZE];
 extern char delegate[CHAR_BUF_SIZE];
 extern int skip_n_frames;
 extern bool allow_multiple;

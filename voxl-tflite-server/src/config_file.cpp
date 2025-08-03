@@ -2,6 +2,7 @@
 
 char model[CHAR_BUF_SIZE];
 char input_pipe[CHAR_BUF_SIZE];
+char control_input_pipe[CHAR_BUF_SIZE];
 char delegate[CHAR_BUF_SIZE];
 int skip_n_frames;
 bool allow_multiple;
@@ -16,6 +17,8 @@ void config_file_print(void)
     printf("model:                            %s\n", model);
     printf("=================================================================\n");
     printf("input_pipe:                       %s\n", input_pipe);
+    printf("=================================================================\n");
+    printf("control_input_pipe:               %s\n", control_input_pipe);
     printf("=================================================================\n");
     printf("delegate:                         %s\n", delegate);
     printf("=================================================================\n");
@@ -44,6 +47,7 @@ int config_file_read(void)
     json_fetch_int_with_default(parent, "skip_n_frames", &skip_n_frames, 0);
     json_fetch_string_with_default(parent, "model", model, CHAR_BUF_SIZE, "/usr/bin/dnn/ssdlite_mobilenet_v2_coco.tflite");
     json_fetch_string_with_default(parent, "input_pipe", input_pipe, CHAR_BUF_SIZE, "/run/mpa/hires_small_color/");
+    json_fetch_string_with_default(parent, "control_input_pipe", control_input_pipe, CHAR_BUF_SIZE, "/run/mpa/control_out");
     json_fetch_string_with_default(parent, "delegate", delegate, CHAR_BUF_SIZE, "gpu");
 
     int requires_labels = 0;

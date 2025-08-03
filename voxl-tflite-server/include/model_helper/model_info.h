@@ -23,6 +23,7 @@ enum ModelName
     GATE_XYZ,
     GATE_YAW,
     GATE_BIN,
+    ZEROSHOT,
     PLACEHOLDER
 };
 

@@ -9,6 +9,7 @@
 #include "model_helper/gate_xyz_model_helper.h"
 #include "model_helper/gate_yaw_model_helper.h"
 #include "model_helper/gate_bin_model_helper.h"
+#include "model_helper/zeroshot_model_helper.h"
 
 
 ModelHelper *create_model_helper(ModelName model_name,
@@ -156,6 +157,18 @@ ModelHelper *create_model_helper(ModelName model_name,
     }
     // not sure about the utility of this enum
     // might remove later
+    case ZEROSHOT:
+    {
+        if (model_category == OBJECT_DETECTION)
+        {
+            return new ZeroshotModelHelper(model, labels_in_use, opt_, en_debug, en_timing, do_normalize);
+        }
+        else
+        {
+            fprintf(stderr, "Unsupported category for the given model\n");
+        }
+        break;
+    }
     case PLACEHOLDER:
     {
         if (model_category == OBJECT_DETECTION)

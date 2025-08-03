@@ -23,7 +23,7 @@ int main() {
     }
 
     if (pipe_client_open(ch,
-                         "/run/mpa/control_in",
+                         "/run/mpa/zeroshot_tflite_data",
                          "mpa_reader",
                          0,
                          0) != 0) {

@@ -109,11 +109,24 @@ void preprocess_worker(ModelHelper *model_helper)
         {
             std::lock_guard<std::mutex> inference_lock(preprocess_inference_mutex);
 
-            auto pipeline_data = std::make_shared<PipelineData>();
-            pipeline_data->preprocessed_image = preprocessed_image;
-            pipeline_data->metadata = new_frame->metadata;
-            pipeline_data->output_image = output_image;
-            // last_inferenence_time is not initialized for now
+                    auto pipeline_data = std::make_shared<PipelineData>();
+        pipeline_data->preprocessed_image = preprocessed_image;
+        pipeline_data->metadata = new_frame->metadata;
+        pipeline_data->output_image = output_image;
+        // last_inferenence_time is not initialized for now
+        
+        // Copy control buffer from global state
+        extern ControlMsg control_buffer[5];
+        extern bool control_buffer_filled;
+        pipeline_data->control_buffer_filled = control_buffer_filled;
+        for (int i = 0; i < 5; i++) {
+            pipeline_data->control_buffer[i][0] = control_buffer[i].vx;
+            pipeline_data->control_buffer[i][1] = control_buffer[i].vy;
+            pipeline_data->control_buffer[i][2] = control_buffer[i].vz;
+            pipeline_data->control_buffer[i][3] = control_buffer[i].yaw;
+        }
+        
+
 
             preprocess_inference_queue.push(pipeline_data);
             preprocess_inference_cond.notify_one();
@@ -192,7 +205,7 @@ void postprocess_worker(ModelHelper *model_helper)
         model_helper->preprocessed_image = pipeline_data->preprocessed_image;
         std::shared_ptr<cv::Mat> output_image = pipeline_data->output_image;
         // sets up post processing and related operations
-        if (!model_helper->worker(*output_image, pipeline_data->last_inference_time, pipeline_data->metadata)) {
+        if (!model_helper->worker(*output_image, pipeline_data->last_inference_time, pipeline_data->metadata, pipeline_data.get())) {
             postprocess_finish = true;
             postprocess_cond.notify_one();
             continue;

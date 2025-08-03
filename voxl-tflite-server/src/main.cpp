@@ -12,6 +12,9 @@ ModelHelper *model_helper;
 
 bool en_debug = false;
 bool en_timing = false;
+
+// Global variables for zeroshot model
+static ZeroshotModelHelper* g_zeroshot_model = nullptr;
 char *coco_labels = (char *)"/usr/bin/dnn/coco_labels.txt";
 char *city_labels = (char *)"/usr/bin/dnn/cityscapes_labels.txt";
 char *imagenet_labels = (char *)"/usr/bin/dnn/imagenet_labels.txt";
@@ -26,6 +29,12 @@ static void _camera_helper_cb(__attribute__((unused)) int ch,
 static void _camera_disconnect_cb(__attribute__((unused)) int ch,
                                   __attribute__((unused)) void *context);
 static void _camera_connect_cb(__attribute__((unused)) int ch,
+                               __attribute__((unused)) void *context);
+static void _control_helper_cb(__attribute__((unused)) int ch,
+                              void *context);
+static void _control_disconnect_cb(__attribute__((unused)) int ch,
+                                  __attribute__((unused)) void *context);
+static void _control_connect_cb(__attribute__((unused)) int ch,
                                __attribute__((unused)) void *context);
 static void set_delegate(DelegateOpt *opt);
 static void initialize_model_settings(char *model, char *delegate, ModelName *model_name, ModelCategory *model_category, NormalizationType *norm_type);
@@ -89,6 +98,11 @@ int main(int argc, char *argv[])
 
     model_helper = create_model_helper(model_name, model_category, opt_, do_normalize);
 
+    // Set global pointer if it's a zeroshot model
+    if (model_name == ZEROSHOT) {
+        g_zeroshot_model = static_cast<ZeroshotModelHelper*>(model_helper);
+    }
+
     // store cam name
     std::string full_path(input_pipe);
     std::string cam_name(
@@ -128,6 +142,20 @@ int main(int argc, char *argv[])
                          CLIENT_FLAG_EN_CAMERA_HELPER, 0))
     {
         fprintf(stderr, "Failed to open pipe: %s\n", input_pipe);
+        return -1;
+    }
+
+    // fire up our control input connection
+    int control_ch = pipe_client_get_next_available_channel();
+
+    pipe_client_set_connect_cb(control_ch, _control_connect_cb, NULL);
+    pipe_client_set_disconnect_cb(control_ch, _control_disconnect_cb, NULL);
+    pipe_client_set_simple_helper_cb(control_ch, _control_helper_cb, NULL);
+
+    if (pipe_client_open(control_ch, control_input_pipe, PROCESS_NAME,
+                         CLIENT_FLAG_EN_SIMPLE_HELPER, 0))
+    {
+        fprintf(stderr, "Failed to open control pipe: %s\n", control_input_pipe);
         return -1;
     }
 
@@ -376,6 +404,12 @@ static void initialize_model_settings(char *model, char *delegate, ModelName *mo
         *model_category = OBJECT_DETECTION;
         *norm_type      = NONE;
     }
+    else if (!strcmp(model, "/usr/bin/dnn/zeroshot_model.tflite"))
+    {
+        *model_name     = ZEROSHOT;
+        *model_category = OBJECT_DETECTION;
+        *norm_type      = NONE;
+    }
     else
     {
         fprintf(stderr,
@@ -383,5 +417,67 @@ static void initialize_model_settings(char *model, char *delegate, ModelName *mo
                 "to object detection.\n");
         *model_name = PLACEHOLDER;
         *model_category = OBJECT_DETECTION;
+    }
+}
+
+static void _control_connect_cb(__attribute__((unused)) int ch,
+                               __attribute__((unused)) void *context)
+{
+    fprintf(stderr, "Connected to control input pipe\n");
+}
+
+static void _control_disconnect_cb(__attribute__((unused)) int ch,
+                                  __attribute__((unused)) void *context)
+{
+    fprintf(stderr, "Disconnected from control input pipe\n");
+}
+
+// Global control buffer to store 5 past controls
+typedef struct {
+    float vx;
+    float vy;
+    float vz;
+    float yaw;
+    uint64_t timestamp;
+} ControlMsg;
+
+static ControlMsg control_buffer[5] = {0};  // 5 past controls
+static int control_buffer_index = 0;
+static bool control_buffer_filled = false;
+
+static void _control_helper_cb(__attribute__((unused)) int ch,
+                              void *context)
+{
+    // Read control message from pipe
+    ControlMsg msg;
+    int fd = pipe_client_get_fd(ch);
+    if (fd >= 0) {
+        ssize_t bytes_read = read(fd, &msg, sizeof(msg));
+        if (bytes_read == sizeof(msg)) {
+            // Store in circular buffer
+            control_buffer[control_buffer_index] = msg;
+            control_buffer_index = (control_buffer_index + 1) % 5;
+            
+            if (control_buffer_index == 0) {
+                control_buffer_filled = true;
+            }
+            
+            // Update zeroshot model control buffer if available
+            if (g_zeroshot_model) {
+                float control_array[5][4];
+                for (int i = 0; i < 5; i++) {
+                    control_array[i][0] = control_buffer[i].vx;
+                    control_array[i][1] = control_buffer[i].vy;
+                    control_array[i][2] = control_buffer[i].vz;
+                    control_array[i][3] = control_buffer[i].yaw;
+                }
+                g_zeroshot_model->update_control_buffer(control_array, control_buffer_filled);
+            }
+            
+            if (en_debug) {
+                fprintf(stderr, "Control received: vx=%.3f, vy=%.3f, vz=%.3f, yaw=%.3f\n", 
+                        msg.vx, msg.vy, msg.vz, msg.yaw);
+            }
+        }
     }
 }
