@@ -16,6 +16,16 @@
 #include "model_helper/model_helper.h"
 #include "model_helper/model_info.h"
 
+// Control message structure for zeroshot model
+typedef struct {
+    float vx, vy, vz, yaw;
+    uint64_t timestamp;
+} ControlMsg;
+
+// External declarations for control buffer
+extern ControlMsg control_buffer[5];
+extern bool control_buffer_filled;
+
 #define QUEUE_LIMIT       1
 
 struct InferenceWorkerArgs

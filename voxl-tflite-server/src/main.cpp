@@ -2,6 +2,7 @@
 #include "utils.h"
 #include "model_helper/model_info.h"
 #include "inference_handler.h"
+#include "model_helper/zeroshot_model_helper.h"
 
 #define PROCESS_NAME "voxl-tflite-server"
 #define HIRES_PIPE "/run/mpa/hires_small_color/"
@@ -31,6 +32,8 @@ static void _camera_disconnect_cb(__attribute__((unused)) int ch,
 static void _camera_connect_cb(__attribute__((unused)) int ch,
                                __attribute__((unused)) void *context);
 static void _control_helper_cb(__attribute__((unused)) int ch,
+                              __attribute__((unused)) char *data,
+                              __attribute__((unused)) int len,
                               void *context);
 static void _control_disconnect_cb(__attribute__((unused)) int ch,
                                   __attribute__((unused)) void *context);
@@ -433,19 +436,13 @@ static void _control_disconnect_cb(__attribute__((unused)) int ch,
 }
 
 // Global control buffer to store 5 past controls
-typedef struct {
-    float vx;
-    float vy;
-    float vz;
-    float yaw;
-    uint64_t timestamp;
-} ControlMsg;
-
-static ControlMsg control_buffer[5] = {0};  // 5 past controls
+ControlMsg control_buffer[5] = {0};  // 5 past controls
 static int control_buffer_index = 0;
-static bool control_buffer_filled = false;
+bool control_buffer_filled = false;
 
 static void _control_helper_cb(__attribute__((unused)) int ch,
+                              __attribute__((unused)) char *data,
+                              __attribute__((unused)) int len,
                               void *context)
 {
     // Read control message from pipe

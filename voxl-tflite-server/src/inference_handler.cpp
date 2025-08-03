@@ -116,8 +116,6 @@ void preprocess_worker(ModelHelper *model_helper)
         // last_inferenence_time is not initialized for now
         
         // Copy control buffer from global state
-        extern ControlMsg control_buffer[5];
-        extern bool control_buffer_filled;
         pipeline_data->control_buffer_filled = control_buffer_filled;
         for (int i = 0; i < 5; i++) {
             pipeline_data->control_buffer[i][0] = control_buffer[i].vx;
