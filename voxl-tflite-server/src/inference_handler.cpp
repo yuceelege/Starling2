@@ -114,20 +114,9 @@ void preprocess_worker(ModelHelper *model_helper)
         pipeline_data->metadata = new_frame->metadata;
         pipeline_data->output_image = output_image;
         // last_inferenence_time is not initialized for now
-        
-        // Copy control buffer from global state
-        pipeline_data->control_buffer_filled = control_buffer_filled;
-        for (int i = 0; i < 5; i++) {
-            pipeline_data->control_buffer[i][0] = control_buffer[i].vx;
-            pipeline_data->control_buffer[i][1] = control_buffer[i].vy;
-            pipeline_data->control_buffer[i][2] = control_buffer[i].vz;
-            pipeline_data->control_buffer[i][3] = control_buffer[i].yaw;
-        }
-        
 
-
-            preprocess_inference_queue.push(pipeline_data);
-            preprocess_inference_cond.notify_one();
+        preprocess_inference_queue.push(pipeline_data);
+        preprocess_inference_cond.notify_one();
         }
     }
 }

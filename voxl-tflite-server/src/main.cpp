@@ -3,6 +3,7 @@
 #include "model_helper/model_info.h"
 #include "inference_handler.h"
 #include "model_helper/zeroshot_model_helper.h"
+#include <signal.h>
 
 #define PROCESS_NAME "voxl-tflite-server"
 #define HIRES_PIPE "/run/mpa/hires_small_color/"
@@ -41,6 +42,14 @@ static void _control_connect_cb(__attribute__((unused)) int ch,
                                __attribute__((unused)) void *context);
 static void set_delegate(DelegateOpt *opt);
 static void initialize_model_settings(char *model, char *delegate, ModelName *model_name, ModelCategory *model_category, NormalizationType *norm_type);
+
+// Signal handler for clean shutdown
+static void signal_handler(int signal) {
+    if (signal == SIGINT || signal == SIGTERM) {
+        fprintf(stderr, "\nReceived signal %d, shutting down gracefully...\n", signal);
+        main_running = 0;
+    }
+}
 
 int main(int argc, char *argv[])
 {
@@ -115,6 +124,10 @@ int main(int argc, char *argv[])
     model_helper->cam_name = cam_name;
 
     main_running = 1;
+
+    // Set up signal handlers for clean shutdown
+    signal(SIGINT, signal_handler);
+    signal(SIGTERM, signal_handler);
 
     fprintf(stderr, "\n------VOXL TFLite Server------\n\n");
 
@@ -437,44 +450,49 @@ static void _control_disconnect_cb(__attribute__((unused)) int ch,
 
 // Global control buffer to store 5 past controls
 ControlMsg control_buffer[5] = {0};  // 5 past controls
-static int control_buffer_index = 0;
+int control_buffer_index = 0;
+int messages_received = 0;  // Track total messages received
 bool control_buffer_filled = false;
 
 static void _control_helper_cb(__attribute__((unused)) int ch,
-                              __attribute__((unused)) char *data,
-                              __attribute__((unused)) int len,
+                              char *data,
+                              int len,
                               void *context)
 {
-    // Read control message from pipe
-    ControlMsg msg;
-    int fd = pipe_client_get_fd(ch);
-    if (fd >= 0) {
-        ssize_t bytes_read = read(fd, &msg, sizeof(msg));
-        if (bytes_read == sizeof(msg)) {
-            // Store in circular buffer
-            control_buffer[control_buffer_index] = msg;
-            control_buffer_index = (control_buffer_index + 1) % 5;
+    // Use the callback data instead of direct file read
+    if (len == sizeof(ControlMsg)) {
+        ControlMsg msg;
+        memcpy(&msg, data, sizeof(msg));
+        
+        // Store in circular buffer
+        control_buffer[control_buffer_index] = msg;
+        control_buffer_index = (control_buffer_index + 1) % 5;
+        messages_received++;
+        
+        // Mark as filled after we have at least 5 messages
+        if (messages_received >= 5) {
+            control_buffer_filled = true;
+        }
+        
+        // Update zeroshot model control buffer if available
+        if (g_zeroshot_model && messages_received >= 5) {
+            float control_array[5][4];
             
-            if (control_buffer_index == 0) {
-                control_buffer_filled = true;
+            // Copy controls in reverse chronological order (most recent first)
+            for (int i = 0; i < 5; i++) {
+                int buffer_idx = (control_buffer_index - 1 - i + 5) % 5;
+                control_array[i][0] = control_buffer[buffer_idx].vx;
+                control_array[i][1] = control_buffer[buffer_idx].vy;
+                control_array[i][2] = control_buffer[buffer_idx].vz;
+                control_array[i][3] = control_buffer[buffer_idx].yaw;
             }
             
-            // Update zeroshot model control buffer if available
-            if (g_zeroshot_model) {
-                float control_array[5][4];
-                for (int i = 0; i < 5; i++) {
-                    control_array[i][0] = control_buffer[i].vx;
-                    control_array[i][1] = control_buffer[i].vy;
-                    control_array[i][2] = control_buffer[i].vz;
-                    control_array[i][3] = control_buffer[i].yaw;
-                }
-                g_zeroshot_model->update_control_buffer(control_array, control_buffer_filled);
-            }
-            
-            if (en_debug) {
-                fprintf(stderr, "Control received: vx=%.3f, vy=%.3f, vz=%.3f, yaw=%.3f\n", 
-                        msg.vx, msg.vy, msg.vz, msg.yaw);
-            }
+            g_zeroshot_model->update_control_buffer(control_array, control_buffer_filled);
+        }
+        
+        if (en_debug) {
+            fprintf(stderr, "Control received: vx=%.3f, vy=%.3f, vz=%.3f, yaw=%.3f (total: %d)\n", 
+                    msg.vx, msg.vy, msg.vz, msg.yaw, messages_received);
         }
     }
 }

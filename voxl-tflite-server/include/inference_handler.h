@@ -22,8 +22,10 @@ typedef struct {
     uint64_t timestamp;
 } ControlMsg;
 
-// External declarations for control buffer
+// External declarations for control buffer (used by main.cpp)
 extern ControlMsg control_buffer[5];
+extern int control_buffer_index;
+extern int messages_received;
 extern bool control_buffer_filled;
 
 #define QUEUE_LIMIT       1
@@ -46,8 +48,6 @@ struct PipelineData
     std::shared_ptr<cv::Mat> preprocessed_image;
     std::shared_ptr<cv::Mat> output_image;
     double last_inference_time;
-    float control_buffer[5][4];  // 5 past controls, each with vx,vy,vz,yaw
-    bool control_buffer_filled;
 };
 
 
