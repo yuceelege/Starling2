@@ -276,3 +276,28 @@ import vicon_dssdk
 6. Run viconmavlink.py and check in the VOXL 2 whether it receives the odometry mavlink packages by typing "voxl-inspect-mavlink mavlink_from_gcs". If you see the odometry name in the packages list, then VOXL 2 is indeed receiving the state information and most likely processing it correctly.
 
 7. Now you can use everything we introduced in voxl-docker-mavsdk-python for various tasks.
+
+-----------------------------------------------------------------------------------
+
+# **Recording Images from VOXL for GS Training**
+
+1. Make sure drone is connected to ViconRouter_2.4G and SSH into VOXL 2 Drone using the previous intructions.
+
+2. From your local pc/laptop, try http://192.168.1.230/ to see the small hires camera output. If you can see the camera feed, we are ready.
+
+3. Run the following command to capture images while you are moving
+
+```bash
+voxl-record-raw-image hires_small_color -d /data/raw_capture/ -n 5000
+```
+Last number is the number of frames you are going to capture. Capture rate is around (30fps). Previous is the directory images will be saved. Please make sure the directory "/data/raw_capture" in VOXL 2 is cleared before you start a recording.
+
+4. After the capturing is complete, we will zip and adb pull the file.
+
+```bash
+tar -cvf raw_capture.tar raw_capture/
+
+adb pull /data/raw_capture.tar
+```
+
+5. In your host computer, unzip the file and run the "bintojpg.py" script to convert the saved .bin files to .png files.
