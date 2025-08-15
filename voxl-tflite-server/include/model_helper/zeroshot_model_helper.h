@@ -25,10 +25,12 @@ public:
                      double last_inference_time,
                      void *input_params) override;
     bool run_inference(cv::Mat &preprocessed_image, double *last_inference_time) override;
+    bool preprocess(camera_image_metadata_t &meta,
+                    char *frame, std::shared_ptr<cv::Mat> preprocessed_image,
+                    std::shared_ptr<cv::Mat> output_image) override;
 private:
     float control_input[5][4];  // 5 past controls, each with vx,vy,vz,yaw
     bool control_buffer_filled;
-    cv::Mat combine_rgb_and_controls(const cv::Mat &rgb_image, const float control_buffer[5][4]);
 public:
     void update_control_buffer(const float control_buffer[5][4], bool filled);
 };

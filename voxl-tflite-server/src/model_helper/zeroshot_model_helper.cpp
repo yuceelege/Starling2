@@ -20,6 +20,16 @@ bool ZeroshotModelHelper::postprocess(cv::Mat &,
     return true;
 }
 
+bool ZeroshotModelHelper::preprocess(camera_image_metadata_t &meta,
+                                    char *frame, 
+                                    std::shared_ptr<cv::Mat> preprocessed_image,
+                                    std::shared_ptr<cv::Mat> output_image)
+{
+    // Let the base class handle image preprocessing and resizing
+    // This will automatically resize the image to model_width x model_height x 3
+    return ModelHelper::preprocess(meta, frame, preprocessed_image, output_image);
+}
+
 bool ZeroshotModelHelper::worker(cv::Mat &output_image,
                                  double last_inference_time,
                                  camera_image_metadata_t metadata,
@@ -52,35 +62,7 @@ bool ZeroshotModelHelper::worker(cv::Mat &output_image,
     return true;
 }
 
-cv::Mat ZeroshotModelHelper::combine_rgb_and_controls(const cv::Mat &rgb_image, const float control_buffer[5][4])
-{
-    // Convert RGB image to float32 and normalize to [0,1]
-    cv::Mat rgb_float;
-    rgb_image.convertTo(rgb_float, CV_32F, 1.0/255.0);
-    
-    // Reshape RGB to 1D vector: (height * width * channels)
-    int rgb_size = rgb_float.rows * rgb_float.cols * rgb_float.channels();
-    cv::Mat rgb_1d = rgb_float.reshape(1, rgb_size);
-    
-    // Create control buffer as 1D vector: (5 * 4 = 20 elements)
-    cv::Mat control_1d(20, 1, CV_32F);
-    for (int i = 0; i < 5; i++) {
-        for (int j = 0; j < 4; j++) {
-            control_1d.at<float>(i * 4 + j, 0) = control_buffer[i][j];
-        }
-    }
-    
-    // Concatenate RGB and control vectors
-    cv::Mat combined;
-    cv::vconcat(rgb_1d, control_1d, combined);
-    
-    if (en_debug) {
-        fprintf(stderr, "Combined input size: %d (RGB: %d + Controls: 20)\n", 
-                combined.rows, rgb_size);
-    }
-    
-    return combined;
-}
+
 
 bool ZeroshotModelHelper::run_inference(cv::Mat &preprocessed_image, double *last_inference_time)
 {
@@ -92,28 +74,66 @@ bool ZeroshotModelHelper::run_inference(cv::Mat &preprocessed_image, double *las
         return false;
     }
     
-    // Combine RGB image with control buffer
-    cv::Mat combined_input = combine_rgb_and_controls(preprocessed_image, control_input);
+    // Get input tensors
+    TfLiteTensor *image_tensor = interpreter->input_tensor(0);  // RGB image input
+    TfLiteTensor *control_tensor = interpreter->input_tensor(1); // Control input
     
-    // Get input tensor
-    TfLiteTensor *input_tensor = interpreter->input_tensor(0);
-    if (!input_tensor) {
-        fprintf(stderr, "Failed to get input tensor\n");
+    if (!image_tensor || !control_tensor) {
+        fprintf(stderr, "Failed to get input tensors\n");
         return false;
     }
     
-    // Check if input size matches
-    int expected_size = input_tensor->bytes / sizeof(float);
-    int actual_size = combined_input.rows;
+    if (en_debug) {
+        fprintf(stderr, "Image tensor: %dx%dx%d, Control tensor: %d elements\n",
+                image_tensor->dims->data[1], image_tensor->dims->data[2], image_tensor->dims->data[3],
+                control_tensor->dims->data[1]);
+    }
     
-    if (expected_size != actual_size) {
-        fprintf(stderr, "Input size mismatch: expected %d, got %d\n", expected_size, actual_size);
+    // Copy resized image to first input tensor (RGB)
+    float *image_data = interpreter->typed_input_tensor<float>(0);
+    cv::Mat image_float;
+    preprocessed_image.convertTo(image_float, CV_32F, 1.0/255.0); // Normalize to [0,1]
+    
+    // Verify image size matches expected tensor size
+    int expected_image_size = image_tensor->dims->data[1] * image_tensor->dims->data[2] * image_tensor->dims->data[3];
+    int actual_image_size = image_float.rows * image_float.cols * image_float.channels();
+    
+    if (expected_image_size != actual_image_size) {
+        fprintf(stderr, "Image size mismatch: expected %d, got %d\n", expected_image_size, actual_image_size);
         return false;
     }
     
-    // Copy combined input to tensor
-    float *input_data = interpreter->typed_input_tensor<float>(0);
-    memcpy(input_data, combined_input.data, combined_input.rows * sizeof(float));
+    // Safer copy - ensure continuous memory layout
+    if (image_float.isContinuous()) {
+        memcpy(image_data, image_float.data, actual_image_size * sizeof(float));
+    } else {
+        // If not continuous, copy row by row
+        for (int i = 0; i < image_float.rows; i++) {
+            memcpy(image_data + i * image_float.cols * image_float.channels(),
+                   image_float.ptr<float>(i),
+                   image_float.cols * image_float.channels() * sizeof(float));
+        }
+    }
+    
+    // Copy control data to second input tensor (5x4 controls)
+    float *control_data = interpreter->typed_input_tensor<float>(1);
+    int expected_control_size = control_tensor->dims->data[1];
+    
+    if (expected_control_size != 20) { // 5*4 = 20
+        fprintf(stderr, "Control tensor size mismatch: expected %d, got 20\n", expected_control_size);
+        return false;
+    }
+    
+    for (int i = 0; i < 5; i++) {
+        for (int j = 0; j < 4; j++) {
+            control_data[i * 4 + j] = control_input[i][j];
+        }
+    }
+    
+    if (en_debug) {
+        fprintf(stderr, "Copied %d image elements and %d control elements to tensors\n", 
+                actual_image_size, expected_control_size);
+    }
     
     // Run inference
     TfLiteStatus status = interpreter->Invoke();
