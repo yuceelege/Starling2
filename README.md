@@ -37,7 +37,7 @@ This step is straightforward. Install [https://docs.modalai.com/installing-qgc/]
 
 Drone automatically connects to QGC in the softap mode (drone hotspot mode). For establishing connection in the station mode, write the following in the voxl terminal: `nano /etc/modalai/voxl-mavlink-server.conf`
 
-Drone was assigned ""192.168.8.10" in the softap mode by default that is why QGC connects automatically in that mode since "192.168.8.10" is also written in voxl-mavlink-server.conf. Change this IP address to the right address by copying the ip from "ifconfig" on the voxl machine. 
+Host was assigned ""192.168.8.10" in the softap mode by default that is why QGC connects automatically in that mode since "192.168.8.10" is also written in voxl-mavlink-server.conf. Change this IP address to the right address by copying the ip from "ifconfig" on the voxl machine. 
 
 
 ## 5. First flight
