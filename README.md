@@ -243,14 +243,9 @@ en_vio = "false"
 systemctl disable voxl-vision-hub
 ```
 ```bash
-systemctl disable voxl-qvio-server
-```
-```bash
 systemctl stop voxl-vision-hub
 ```
-```bash
-systemctl stop voxl-qvio-server
-```
+
 
 Now VOXL 2 is ready for using the VICON. Enable and start these services and change the `en_vio` parameter back to `"true"` if you intend to use VIO later.
 
