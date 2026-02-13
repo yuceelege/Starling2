@@ -238,14 +238,6 @@ nano /etc/modalai/voxl-vision-hub.conf
 en_vio = "false"
 ```
 
-3. Stop and disable voxl-vision-hub and voxl-qvio-server:
-```bash
-systemctl disable voxl-vision-hub
-```
-```bash
-systemctl stop voxl-vision-hub
-```
-
 
 Now VOXL 2 is ready for using the VICON. Enable and start these services and change the `en_vio` parameter back to `"true"` if you intend to use VIO later.
 
