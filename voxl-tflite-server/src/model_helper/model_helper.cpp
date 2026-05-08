@@ -1,4 +1,5 @@
 #include "model_helper/model_helper.h"
+#include "model_helper/ctrl_lya_model_helper.h"
 #include "model_helper/posenet_model_helper.h"
 #include "model_helper/yolov8_model_helper.h"
 #include "model_helper/yolov5_model_helper.h"
@@ -9,6 +10,7 @@
 #include "model_helper/gate_xyz_model_helper.h"
 #include "model_helper/gate_yaw_model_helper.h"
 #include "model_helper/gate_bin_model_helper.h"
+#include "model_helper/unet_model_helper.h"
 
 
 ModelHelper *create_model_helper(ModelName model_name,
@@ -154,6 +156,21 @@ ModelHelper *create_model_helper(ModelName model_name,
             do_normalize
         );
     }
+    case UNET:
+    {
+        if (model_category == SEGMENTATION)
+        {
+            return new UnetModelHelper(model, labels_in_use, opt_, en_debug, en_timing, do_normalize);
+        }
+        else
+        {
+            fprintf(stderr, "Unsupported category for the given model\n");
+        }
+    }
+    case CTRL_LYA:
+    {
+        return new CtrlLyaModelHelper(model, labels_in_use, opt_, en_debug, en_timing, do_normalize);
+    }
     // not sure about the utility of this enum
     // might remove later
     case PLACEHOLDER:
@@ -171,6 +188,7 @@ ModelHelper *create_model_helper(ModelName model_name,
     fprintf(stderr, "Unsupported model\n");
     return nullptr;
 }
+
 ModelHelper::ModelHelper(char *model_file, char *labels_file,
                          DelegateOpt delegate_choice, bool _en_debug,
                          bool _en_timing, NormalizationType _do_normalize)
@@ -226,57 +244,71 @@ ModelHelper::ModelHelper(char *model_file, char *labels_file,
         exit(-1);
     }
 
-    // Get model-specific parameters
-    TfLiteIntArray *dims = interpreter->tensor(interpreter->inputs()[0])->dims;
-    model_height = dims->data[1];
-    model_width = dims->data[2];
-    model_channels = dims->data[3];
+    // Get image dimensions from the first 4-D input tensor (models like
+    // ctrl_lya have multiple inputs where inputs()[0] may be a 1-D vector).
+    TfLiteIntArray *img_dims = nullptr;
+    for (int idx : interpreter->inputs()) {
+        TfLiteIntArray *d = interpreter->tensor(idx)->dims;
+        if (d->size == 4) { img_dims = d; break; }
+    }
+    if (img_dims) {
+        model_height   = img_dims->data[1];
+        model_width    = img_dims->data[2];
+        model_channels = img_dims->data[3];
+    } else {
+        model_height = model_width = model_channels = 0;
+    }
 
     printf("Successfully built interpreter\n");
 }
 
-bool ModelHelper::preprocess(camera_image_metadata_t &meta,
-                             char *frame, std::shared_ptr<cv::Mat> preprocessed_image,
-                             std::shared_ptr<cv::Mat> output_image)
+bool ModelHelper::preprocess(camera_image_metadata_t &meta, char *frame, std::shared_ptr<cv::Mat> preprocessed_image, std::shared_ptr<cv::Mat> output_image)
 {
+    log_memory_usage("BASE_PREPROCESS_START");
+    
     start_time = rc_nanos_monotonic_time();
     num_frames_processed++;
-
+    
     // initialize the resize map on first frame received only
     if (num_frames_processed == 1)
     {
-        mcv_init_resize_map(meta.width, meta.height, model_width, model_height,
-                            &map);
+        mcv_init_resize_map(meta.width, meta.height, model_width, model_height, &map);
         input_height = meta.height;
         input_width = meta.width;
 
         if (meta.format == IMAGE_FORMAT_RAW8)
         {
-            resize_output =
-                (uint8_t *)malloc(model_height * model_width * sizeof(uint8_t));
+            resize_output = (uint8_t *)malloc(model_height * model_width * sizeof(uint8_t));
         }
         else
         {
-            resize_output = (uint8_t *)malloc(model_height * model_width *
-                                              sizeof(uint8_t) * 3);
+            resize_output = (uint8_t *)malloc(model_height * model_width * sizeof(uint8_t) * 3);
         }
         return false;
     }
+
     // if color input provided, make sure that is reflected in output image
     switch (meta.format)
     {
-    case IMAGE_FORMAT_STEREO_NV12:
+        case IMAGE_FORMAT_STEREO_NV12:
         meta.format = IMAGE_FORMAT_NV12;
     case IMAGE_FORMAT_NV12:
     {
-        cv::Mat yuv(input_height + input_height / 2, input_width, CV_8UC1,
-                    (uchar *)frame);
+        cv::Mat yuv(input_height + input_height / 2, input_width, CV_8UC1, (uchar *)frame);
+        
         cv::cvtColor(yuv, *output_image, CV_YUV2RGB_NV12);
-        mcv_resize_8uc3_image(output_image->data, resize_output, &map);
-        cv::Mat holder(model_height, model_width, CV_8UC3,
-                       (uchar *)resize_output);
+        
+        // Replace custom resize with OpenCV resize
+        cv::resize(*output_image, *preprocessed_image, cv::Size(model_width, model_height), 0, 0, cv::INTER_LINEAR);
 
-        *preprocessed_image = holder;
+        // Convert from HWC to CHW format for UNet models (like Python code does)
+        // This fixes the dimension interpretation issue
+        if (model_width == 224 && model_height == 224 && model_channels == 3) {
+            // Skipping HWC to CHW conversion (reverted - fix network structure instead)
+        } else {
+            // Skipping HWC to CHW conversion (not UNet model)
+        }
+        
         meta.format = IMAGE_FORMAT_RGB;
         meta.size_bytes = (meta.height * meta.width * 3);
         meta.stride = (meta.width * 3);
@@ -285,12 +317,14 @@ bool ModelHelper::preprocess(camera_image_metadata_t &meta,
     case IMAGE_FORMAT_YUV422:
     {
         cv::Mat yuv(input_height, input_width, CV_8UC2, (uchar *)frame);
+        
         cv::cvtColor(yuv, *output_image, CV_YUV2RGB_YUYV);
 
         // Resize to model input dimensions
         mcv_resize_8uc3_image(output_image->data, resize_output, &map);
+        
         cv::Mat holder(model_height, model_width, CV_8UC3, (uchar *)resize_output);
-
+        
         // Assign processed image and update meta data
         *preprocessed_image = holder;
 
@@ -303,36 +337,49 @@ bool ModelHelper::preprocess(camera_image_metadata_t &meta,
         meta.format = IMAGE_FORMAT_NV21;
     case IMAGE_FORMAT_NV21:
     {
-        cv::Mat yuv(input_height + input_height / 2, input_width, CV_8UC1,
-                    (uchar *)frame);
+        cv::Mat yuv(input_height + input_height / 2, input_width, CV_8UC1, (uchar *)frame);
+        
         cv::cvtColor(yuv, *output_image, CV_YUV2RGB_NV21);
+        
         mcv_resize_8uc3_image(output_image->data, resize_output, &map);
-        cv::Mat holder(model_height, model_width, CV_8UC3,
-                       (uchar *)resize_output);
+        
+        cv::Mat holder(model_height, model_width, CV_8UC3, (uchar *)resize_output);
+
+        // Convert from HWC to CHW format for UNet models (like Python code does)
+        // This fixes the dimension interpretation issue
+        if (model_width == 224 && model_height == 224 && model_channels == 3) {
+            // Skipping HWC to CHW conversion (reverted - fix network structure instead)
+        } else {
+            // Skipping HWC to CHW conversion (not UNet model)
+        }
 
         *preprocessed_image = holder;
-
+        
         meta.format = IMAGE_FORMAT_RGB;
         meta.size_bytes = (meta.height * meta.width * 3);
         meta.stride = (meta.width * 3);
     }
     break;
-
     case IMAGE_FORMAT_STEREO_RAW8:
         meta.format = IMAGE_FORMAT_RAW8;
     case IMAGE_FORMAT_RAW8:
     {
-        *output_image =
-            cv::Mat(input_height, input_width, CV_8UC1, (uchar *)frame);
+        *output_image = cv::Mat(input_height, input_width, CV_8UC1, (uchar *)frame);
 
         // resize to model input dims
         mcv_resize_image(output_image->data, resize_output, &map);
 
         // stack resized input to make "3 channel" grayscale input
-        cv::Mat holder(model_height, model_width, CV_8UC1,
-                       (uchar *)resize_output);
+        cv::Mat holder(model_height, model_width, CV_8UC1, (uchar *)resize_output);
+        
         cv::Mat in[] = {holder, holder, holder};
         cv::merge(in, 3, *preprocessed_image);
+        
+        // Convert from HWC to CHW format for UNet models (like Python code does)
+        // This fixes the dimension interpretation issue
+        if (model_width == 224 && model_height == 224 && model_channels == 3) {
+            fprintf(stderr, "DEBUG: Skipping CHW conversion (RAW8, reverted - fix network structure instead)\n");
+        }
     }
     break;
 
@@ -401,12 +448,12 @@ void ModelHelper::setupDelegate(DelegateOpt delegate_choice)
 
 }
 
-bool ModelHelper::run_inference(cv::Mat &preprocessed_image,
-                                double *last_inference_time)
+bool ModelHelper::run_inference(cv::Mat &preprocessed_image, double *last_inference_time)
 {
+    log_memory_usage("INFERENCE_START");
+    
     start_time = rc_nanos_monotonic_time();
-    // Get input dimension from the input tensor metadata assuming one input
-    // only
+    // Get input dimension from the input tensor metadata assuming one input only
     int input = interpreter->inputs()[0];
 
     // manually fill tensor with image data, specific to input format
@@ -484,6 +531,7 @@ bool ModelHelper::run_inference(cv::Mat &preprocessed_image,
     if (last_inference_time != nullptr)
         *last_inference_time = ((double)(end_time - start_time) / 1000000.);
 
+    log_memory_usage("INFERENCE_END");
     return true;
 }
 

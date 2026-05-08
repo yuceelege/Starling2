@@ -15,7 +15,7 @@ while read -r line; do
   fi
 done <<< "$docker_images"
 
-VOLUMES="-v /tmp:/tmp -v /etc/modalai:/etc/modalai -v /dev:/dev"
+VOLUMES="-v /tmp:/tmp -v /etc/modalai:/etc/modalai -v /dev:/dev -v /statelog:/statelog"
 
 docker_name="$repository:$tag_to_find"
 docker run -it --rm --privileged --net=host --ipc=host -v /run/mpa:/run/mpa ${VOLUMES} $docker_name

@@ -23,6 +23,8 @@ enum ModelName
     GATE_XYZ,
     GATE_YAW,
     GATE_BIN,
+    UNET,
+    CTRL_LYA,
     PLACEHOLDER
 };
 
