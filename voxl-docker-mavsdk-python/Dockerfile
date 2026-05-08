@@ -50,7 +50,6 @@ WORKDIR /home
 
 RUN python3 -m pip install -U pip
 RUN python3 -m pip install asyncio
-RUN python3 -m pip install math
 RUN git clone https://github.com/mavlink/MAVSDK-Python.git /home/MAVSDK-Python
 WORKDIR /home/MAVSDK-Python
 RUN git checkout tags/2.8.0 -b 2.8.0 \
@@ -74,12 +73,14 @@ RUN dpkg -i /tmp/qti-gbm_18.0.0-rc5_arm64.deb \
  && rm /tmp/qti-gbm_18.0.0-rc5_arm64.deb
 RUN apt-get update && apt-get install -y libwayland-server0
 
-RUN gcc -o /home/mpa_reader /home/mpa_reader.c -lmodal_pipe
+RUN gcc -O2 -Wall /home/mpa_reader.c -o /home/mpa_reader -lmodal_pipe -lm
 
 
+RUN python3 -m pip install numpy
+RUN python3 -m pip install opencv-python-headless
 
 WORKDIR /home
-COPY voxl2_takeoff_land.py check_status.py vicon_test.py offboard_8_figure.py offboard_attitude.py offboard_position_velocity_ned.py offboard_velocity_body.py offboard_velocity_ned.py start-mavsdk-server.sh run-docker.sh .
+COPY voxl2_takeoff_land.py check_status.py vicon_test.py offboard_8_figure.py offboard_attitude.py offboard_position_velocity_ned.py offboard_velocity_body.py offboard_velocity_ned.py waypoint_controller.py coordinate_monitor.py start-mavsdk-server.sh run-docker.sh .
 COPY mpa_pipe_reader.py /home/mpa_pipe_reader.py
 RUN chmod +x start-mavsdk-server.sh
 RUN chmod +x run-docker.sh

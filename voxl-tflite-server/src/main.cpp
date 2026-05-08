@@ -376,6 +376,12 @@ static void initialize_model_settings(char *model, char *delegate, ModelName *mo
         *model_category = OBJECT_DETECTION;
         *norm_type      = NONE;
     }
+    else if (!strcmp(model, "/usr/bin/dnn/unet_model.tflite"))
+    {
+        *model_name     = UNET;
+        *model_category = SEGMENTATION;
+        *norm_type      = HARD_DIVISION;
+    }
     else
     {
         fprintf(stderr,

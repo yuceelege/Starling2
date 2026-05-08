@@ -26,6 +26,7 @@ async def run():
             print(f"-- Connected to drone!")
             break
 
+    # Wait for basic health checks to pass before proceeding
     print("Waiting for drone to pass basic health checks...")
     async for health in drone.telemetry.health():
         if (

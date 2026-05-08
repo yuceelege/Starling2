@@ -32,7 +32,7 @@
 #define DETECTION_CH 1
 #define IMAGE_CH 0
 #define MAX_IMAGE_SIZE 12441600
-#define QUEUE_SIZE 24 // max messages to be stored in queue
+#define QUEUE_SIZE 50 // max messages to be stored in queue (increased from 24)
 #define NORMALIZATION_CONST 255.0f
 #define PIXEL_MEAN_GUESS 127.0f
 
@@ -146,6 +146,9 @@ protected:
     // Function to setup the delegate based on selection
     void setupDelegate(DelegateOpt delegate_choice);
 };
+
+// Add this function declaration
+void log_memory_usage(const char* location);
 
 ModelHelper *create_model_helper(ModelName model_name,
                                  ModelCategory model_category,

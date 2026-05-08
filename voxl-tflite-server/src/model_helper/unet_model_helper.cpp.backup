@@ -1,0 +1,166 @@
+#include "model_helper/unet_model_helper.h"
+#include "tensor_data.h"
+#include "image_utils.h"
+
+UnetModelHelper::UnetModelHelper(char *model_file, char *labels_file,
+                                 DelegateOpt delegate_choice, bool _en_debug,
+                                 bool _en_timing, NormalizationType _do_normalize)
+    : ModelHelper(model_file, labels_file, delegate_choice, _en_debug, _en_timing, _do_normalize)
+{
+    fprintf(stderr, "DEBUG: UnetModelHelper constructor called\n");
+    // No dimension override - let the model define its own dimensions
+    // No labels needed for UNet - just threshold-based masking
+}
+
+bool UnetModelHelper::worker(cv::Mat &output_image, double last_inference_time, camera_image_metadata_t metadata, void *input_params)
+{
+    fprintf(stderr, "DEBUG: ===== UNET WORKER START =====\n");
+    fprintf(stderr, "DEBUG: Input metadata: width=%d, height=%d, format=%d\n", 
+            metadata.width, metadata.height, metadata.format);
+    fprintf(stderr, "DEBUG: preprocessed_image dimensions: %dx%d, channels=%d\n",
+            preprocessed_image->rows, preprocessed_image->cols, preprocessed_image->channels());
+    
+    // Create DeepLabModelParams for metadata
+    fprintf(stderr, "DEBUG: Creating DeepLabModelParams\n");
+    DeepLabModelParams params(metadata);
+    
+    // Call postprocess to generate the output
+    fprintf(stderr, "DEBUG: Calling postprocess\n");
+    bool success = postprocess(output_image, last_inference_time, &params);
+    if (!success) {
+        fprintf(stderr, "DEBUG: ❌ postprocess failed\n");
+        return false;
+    }
+    
+    fprintf(stderr, "DEBUG: postprocess succeeded, output_image dimensions: %dx%d, channels=%d\n",
+            output_image.rows, output_image.cols, output_image.channels());
+    
+    // Write the binary mask to the UNet pipe
+    fprintf(stderr, "DEBUG: Writing binary mask to UNet pipe\n");
+    fprintf(stderr, "DEBUG: Writing output_image data: %dx%d, channels=%d\n", 
+            output_image.rows, output_image.cols, output_image.channels());
+    pipe_server_write_camera_frame(IMAGE_CH, params.meta, (char *)output_image.data);
+    
+    fprintf(stderr, "DEBUG: ===== UNET WORKER COMPLETE =====\n");
+    return true;
+}
+
+bool UnetModelHelper::postprocess(cv::Mat &output_image, double last_inference_time, void *input_params)
+{
+    fprintf(stderr, "DEBUG: ===== UNET POSTPROCESS START =====\n");
+    
+    // Cast input params
+    DeepLabModelParams *params = static_cast<DeepLabModelParams*>(input_params);
+    if (!params) {
+        fprintf(stderr, "DEBUG: ❌ Failed to cast input params\n");
+        return false;
+    }
+    fprintf(stderr, "DEBUG: Cast to DeepLabModelParams successful\n");
+    
+    // Get output tensor
+    fprintf(stderr, "DEBUG: Getting output tensor\n");
+    TfLiteTensor *output_tensor = interpreter->output_tensor(0);
+    if (!output_tensor) {
+        fprintf(stderr, "DEBUG: ❌ No output tensor found\n");
+        return false;
+    }
+    
+    // Print tensor info
+    fprintf(stderr, "DEBUG: Output tensor info:\n");
+    fprintf(stderr, "DEBUG: - Type: %d\n", output_tensor->type);
+    fprintf(stderr, "DEBUG: - Dimensions: %d\n", output_tensor->dims->size);
+    for (int i = 0; i < output_tensor->dims->size; i++) {
+        fprintf(stderr, "DEBUG: - Dim[%d]: %d\n", i, output_tensor->dims->data[i]);
+    }
+    fprintf(stderr, "DEBUG: - Bytes: %zu\n", output_tensor->bytes);
+    
+    // Parse dimensions as NHWC: [batch, height, width, channels]
+    int batch_size = output_tensor->dims->data[0];
+    int height = output_tensor->dims->data[1];
+    int width = output_tensor->dims->data[2];
+    int num_channels = output_tensor->dims->data[3];
+    
+    fprintf(stderr, "DEBUG: Parsed dimensions (NHWC): [%d, %d, %d, %d]\n", batch_size, height, width, num_channels);
+    
+    // Get tensor data
+    fprintf(stderr, "DEBUG: Getting tensor data\n");
+    float *output_data = TensorData<float>(output_tensor, 0);
+    if (!output_data) {
+        fprintf(stderr, "DEBUG: ❌ Failed to get tensor data\n");
+        return false;
+    }
+    
+    // Create binary mask from second channel (index 1) with softmax
+    fprintf(stderr, "DEBUG: Creating mask from second channel (index 1), dimensions: %dx%d\n", height, width);
+    fprintf(stderr, "DEBUG: Processing %d channels from model output\n", num_channels);
+    
+    // Create a 1-channel grayscale matrix for the binary mask
+    cv::Mat temp(height, width, CV_8UC1);
+    
+    // Compare both channels and choose the largest one for each pixel (argmax)
+    for (int h = 0; h < height; h++) {
+        for (int w = 0; w < width; w++) {
+            // Get logits for both channels at this pixel
+            int index_ch0 = (h * width * num_channels) + (w * num_channels) + 0;
+            int index_ch1 = (h * width * num_channels) + (w * num_channels) + 1;
+            float logit_ch0 = output_data[index_ch0];
+            float logit_ch1 = output_data[index_ch1];
+            
+            // Choose the channel with higher logit value (argmax)
+            uchar mask_value = (logit_ch1 > logit_ch0) ? 255 : 0;
+            
+            // Set single channel value (grayscale)
+            temp.at<uchar>(h, w) = mask_value;
+        }
+    }
+    
+    fprintf(stderr, "DEBUG: Mask created, checking preprocessed_image\n");
+    fprintf(stderr, "DEBUG: preprocessed_image dimensions: %dx%d, channels=%d\n", 
+            preprocessed_image->rows, preprocessed_image->cols, preprocessed_image->channels());
+    fprintf(stderr, "DEBUG: temp dimensions: %dx%d, channels=%d\n", 
+            temp.rows, temp.cols, temp.channels());
+    
+    // No blending - output clean binary mask
+    fprintf(stderr, "DEBUG: Creating clean binary mask output\n");
+    
+    // Add right border for metadata/labels
+    fprintf(stderr, "DEBUG: Adding border\n");
+    int right_pixel_border = 110;
+    cv::Mat bordered_image(temp.rows, temp.cols + right_pixel_border, CV_8UC3);
+    
+    // Convert grayscale to RGB before copying to bordered image
+    cv::Mat temp_rgb;
+    cv::cvtColor(temp, temp_rgb, cv::COLOR_GRAY2BGR);
+    
+    // Copy the RGB binary mask to the left side
+    temp_rgb.copyTo(bordered_image(cv::Rect(0, 0, temp.cols, temp.rows)));
+    
+    // Set the right border to black
+    bordered_image(cv::Rect(temp.cols, 0, right_pixel_border, temp.rows)) = cv::Scalar(0, 0, 0);
+    
+    // Set up output metadata
+    fprintf(stderr, "DEBUG: Setting up metadata\n");
+    params->meta.width = bordered_image.cols;
+    params->meta.height = bordered_image.rows;
+    params->meta.format = IMAGE_FORMAT_RGB;
+    params->meta.size_bytes = bordered_image.total() * bordered_image.elemSize();
+    params->meta.stride = bordered_image.cols * bordered_image.elemSize();
+    
+    fprintf(stderr, "DEBUG: Final output metadata: width=%d, height=%d, stride=%d, size_bytes=%d\n",
+            params->meta.width, params->meta.height, 
+            params->meta.stride, params->meta.size_bytes);
+    
+    // Copy the final image to output_image
+    output_image = bordered_image;
+    
+    // Draw FPS overlay
+    fprintf(stderr, "DEBUG: Drawing FPS overlay\n");
+    char fps_text[64];
+    snprintf(fps_text, sizeof(fps_text), "FPS: %.1f", 1000.0 / last_inference_time);
+    cv::putText(output_image, fps_text, cv::Point(10, 30), cv::FONT_HERSHEY_SIMPLEX, 0.7, cv::Scalar(0, 255, 0), 2);
+    
+    fprintf(stderr, "DEBUG: ===== UNET POSTPROCESS COMPLETE =====\n");
+    fprintf(stderr, "DEBUG: postprocess succeeded, writing to pipe\n");
+    
+    return true;
+} 

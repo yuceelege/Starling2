@@ -7,7 +7,7 @@ from mavsdk.telemetry import Position
 async def run():
     drone = System(mavsdk_server_address="localhost", port=50051)
     print("Connecting…")
-    await drone.connect(system_address="udp://:14551")
+    await drone.connect(system_address="udp://:14550")
     print("Connected")
 
     # wait for connection

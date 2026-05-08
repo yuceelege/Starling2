@@ -37,6 +37,9 @@ typedef struct {
    float y;
    float z;
    float yaw;
+   float vx;    // linear velocity x component (m/s)
+   float vy;    // linear velocity y component (m/s)
+   float vz;    // linear velocity z component (m/s)
 } VioPoseMsg;
 
 static void rpy_from_R(const float R[9], double *roll_deg, double *pitch_deg, double *yaw_deg)
@@ -113,6 +116,9 @@ int main(void)
            msg.y = pkt.T[1];
            msg.z = pkt.T[2];
            msg.yaw = (float)yaw;
+           msg.vx = pkt.v[0];    // linear velocity x component
+           msg.vy = pkt.v[1];    // linear velocity y component
+           msg.vz = pkt.v[2];    // linear velocity z component
 
            // Output raw binary to stdout (like your working code)
            fwrite(&msg, sizeof(msg), 1, stdout);

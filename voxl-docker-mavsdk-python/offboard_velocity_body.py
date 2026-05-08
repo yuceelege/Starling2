@@ -24,7 +24,6 @@ async def run():
         if (
             health.is_gyrometer_calibration_ok and
             health.is_accelerometer_calibration_ok and
-            health.is_magnetometer_calibration_ok and
             health.is_local_position_ok
         ):
             print("Basic health checks passed")

@@ -26,6 +26,8 @@ adb push offboard_attitude.py $TARGET_DIR
 adb push offboard_position_velocity_ned.py $TARGET_DIR
 adb push offboard_velocity_body.py $TARGET_DIR
 adb push offboard_velocity_ned.py $TARGET_DIR
+adb push waypoint_controller.py $TARGET_DIR
+adb push coordinate_monitor.py $TARGET_DIR
 
 adb push start-mavsdk-server.sh $TARGET_DIR
 adb push run-docker.sh $TARGET_DIR
